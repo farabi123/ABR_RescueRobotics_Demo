@@ -83,7 +83,7 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 	int obstacleTurningSpeed;
 	
 	// ioio variables
-	IOIO_thread_rover_4wd m_ioio_thread;
+	IOIO_thread m_ioio_thread;
 	
 	//blob detection variables
 	private CameraBridgeViewBase mOpenCvCameraView;
@@ -373,9 +373,9 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 	@Override
 	public final void onSensorChanged(SensorEvent event) {
 		 if(m_ioio_thread != null){
-			  setText("ir1: "+m_ioio_thread.get_ir1_reading(), sonar1Text);
-			  setText("ir2: "+m_ioio_thread.get_ir2_reading(), sonar2Text);
-			  setText("ir3: "+m_ioio_thread.get_ir3_reading(), sonar3Text);
+			  setText("ir1: "+m_ioio_thread.get_sonar1_reading(), sonar1Text);
+			  setText("ir2: "+m_ioio_thread.get_sonar2_reading(), sonar2Text);
+			  setText("ir3: "+m_ioio_thread.get_sonar3_reading(), sonar3Text);
 			  setText("distance: "+distance, distanceText);
 			  setText("bearing: "+bearing, bearingText);
 			  setText("heading: "+heading, headingText);
@@ -479,6 +479,7 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 
 	//Log coordinates to phone
 	public String log_coordinates() {
+		System.out.println("HI LOGGING COORDS...");
 		String text;
 		text = "Bucket";
 		Calendar calendar = Calendar.getInstance();
@@ -680,8 +681,8 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 						m_ioio_thread.set_speed(1500+forwardSpeed);
 						m_ioio_thread.set_steering(1500);
 						//Log coordinates if the area of the orange bucket is greater than .01 of the screen
-						if(m_ioio_thread != null && (m_ioio_thread.get_ir2_reading() < 17
-								|| m_ioio_thread.get_ir1_reading() < 17 || m_ioio_thread.get_ir3_reading() < 17
+						if(m_ioio_thread != null && (m_ioio_thread.get_sonar2_reading() < 17
+								|| m_ioio_thread.get_sonar1_reading() < 17 || m_ioio_thread.get_sonar3_reading() < 17
 								|| (mDetector.getMaxArea()/(mDetector.getCenterX()*mDetector.getCenterY()*4) > .12))) {
 							Log.v("app.main", "obstacle reached");
 							log_coordinates();
@@ -718,14 +719,15 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 					}
 				}
 			}
-			else if(m_ioio_thread != null && (m_ioio_thread.get_ir2_reading() < 17 || m_ioio_thread.get_ir1_reading() < 17
-					|| m_ioio_thread.get_ir3_reading() < 17 || (mDetector.getMaxArea()/(mDetector.getCenterX()*mDetector.getCenterY()*4) > .12))) { //might have to change this value
-				//if(curr_loc.distanceTo(dest_loc) <= 25 && m_ioio_thread.get_ir2_reading() < 30 && (mDetector.getMaxArea()/(mDetector.getCenterX()*mDetector.getCenterY()*4) > .01)) //bucket reached
+			else if(m_ioio_thread != null && (m_ioio_thread.get_sonar2_reading() < 17 || m_ioio_thread.get_sonar1_reading() < 17
+					|| m_ioio_thread.get_sonar3_reading() < 17 || (mDetector.getMaxArea()/(mDetector.getCenterX()*mDetector.getCenterY()*4) > .12))) { //might have to change this value
+				//if(curr_loc.distanceTo(dest_loc) <= 25 && m_ioio_thread.get_sonar2_reading() < 30 && (mDetector.getMaxArea()/(mDetector.getCenterX()*mDetector.getCenterY()*4) > .01)) //bucket reached
+				System.out.println("HI CURR LOC: "+curr_loc.distanceTo(dest_loc));
 				if(curr_loc.distanceTo(dest_loc) <= 70) { //bucket reached
 					Log.v("app.main", "bucket reached");
 					//backCounter = 5;
 					log_coordinates();
-					if(m_ioio_thread.get_ir1_reading() < m_ioio_thread.get_ir3_reading()) { //bucket on left
+					if(m_ioio_thread.get_sonar1_reading() < m_ioio_thread.get_sonar3_reading()) { //bucket on left
 						Log.v("app.main", "bucket on left");
 						backObstacleLeftCounter = 18;
 					} else { //bucket on right
@@ -733,7 +735,7 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 						backObstacleRightCounter = 18;
 					}
 				}else{ //avoiding obstacle
-					if(m_ioio_thread.get_ir1_reading() < m_ioio_thread.get_ir3_reading()){ //obstacle on left
+					if(m_ioio_thread.get_sonar1_reading() < m_ioio_thread.get_sonar3_reading()){ //obstacle on left
 						Log.v("app.main", "obstacle on left");
 						backObstacleLeftCounter = 18;
 						//m_ioio_thread.set_speed(1500-obstacleTurningSpeed);
@@ -908,7 +910,7 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 		if (m_ioio_thread == null
 				&& connectionType
 						.matches("ioio.lib.android.bluetooth.BluetoothIOIOConnection")) {
-			m_ioio_thread = new IOIO_thread_rover_4wd();
+			m_ioio_thread = new IOIO_thread(this);
 			return m_ioio_thread;
 		} else
 			return null;
