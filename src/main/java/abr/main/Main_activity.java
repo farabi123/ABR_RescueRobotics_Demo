@@ -77,6 +77,7 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 {
 	private final IOIOAndroidApplicationHelper helper_ = new IOIOAndroidApplicationHelper(this, this); // from IOIOActivity
 	
+	boolean isSame;
 	boolean redRobot = true; //account for different gear ratios
 	int forwardSpeed;
 	int turningSpeed;
@@ -92,7 +93,10 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 	private ColorBlobDetector mDetector;
 	private Mat mSpectrum;
 	private Scalar CONTOUR_COLOR;
-	
+
+	private String[] BucketLocations = {"","","","","","","","","",""};
+
+
 	//app state variables
 	private boolean autoMode;
 	
@@ -164,7 +168,10 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 	boolean tiltingUp = false;
 	int panInc;
 	int tiltInc;
-	
+
+
+
+
 	// called to use OpenCV libraries contained within the app as opposed to a separate download
 	static {
 		if (!OpenCVLoader.initDebug()) {
@@ -233,8 +240,14 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 		//topLeft.setLongitude(-117.833742); // PV
 		//topLeft.setLatitude(33.643253);
 		//topLeft.setLongitude(-117.826558);
-		topLeft.setLatitude(33.642941); // green
-		topLeft.setLongitude(-117.826467); // green
+		//topLeft.setLatitude(33.642941); // green
+		//topLeft.setLongitude(-117.826467); // green
+		//topLeft.setLatitude(33.6451911); //  // Aldrich Park
+		//topLeft.setLongitude(-117.8434636);  // Aldrich Park
+		topLeft.setLatitude(33.643661); //  // RH
+		topLeft.setLongitude(-117.840672);  // RH
+	//	topLeft.setLatitude(33.6439449); //  // RH
+		//topLeft.setLongitude(-117.8440741);  // RH
 		bottomRight = new Location(""); //define the bottomRight corner of field
 		//bottomRight.setLatitude(33.643051);
 		//bottomRight.setLongitude(-117.826044);
@@ -246,8 +259,14 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 		//bottomRight.setLongitude(-117.841332); // ICS
 		//bottomRight.setLatitude(33.642941); // PV
 		//bottomRight.setLongitude(-117.826467); // PV
-		bottomRight.setLatitude(33.642867); // green
-		bottomRight.setLongitude(-117.826853); // green
+		//bottomRight.setLatitude(33.642867); // green
+		//bottomRight.setLongitude(-117.826853); // green
+		//bottomRight.setLatitude(33.64448609); // Aldrich park
+		//bottomRight.setLongitude(-117.8432909); // Aldrich Park
+		//bottomRight.setLatitude(33.6438690); // RH
+		//bottomRight.setLongitude(-117.8442126); // RH
+		bottomRight.setLatitude(33.6435412); // EG
+		bottomRight.setLongitude(-117.8401693); // EG
 	    centerLocation = new Location(""); //calculate the center point of the field
 	    centerLocation.setLatitude((bottomRight.getLatitude()+topLeft.getLatitude())/2);
 	    centerLocation.setLongitude((bottomRight.getLongitude()+topLeft.getLongitude())/2);
@@ -449,8 +468,8 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 	                	byte[] b = info.getBytes();
 	                    fos.write(b);
 	                    fos.close();
-	                    ToneGenerator toneG = new ToneGenerator(AudioManager.STREAM_ALARM, 100);
-	        			toneG.startTone(ToneGenerator.TONE_CDMA_PIP, 200);
+	                   // ToneGenerator toneG = new ToneGenerator(AudioManager.STREAM_ALARM, 100);
+	        		//	toneG.startTone(ToneGenerator.TONE_CDMA_PIP, 200);
 	                } catch (IOException e) {
 	                	Log.e("app.main","Couldn't write to SD");
 	                }
@@ -489,38 +508,146 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 		curr_lat = curr_loc.getLatitude();
 		curr_lon = curr_loc.getLongitude();
 		String info = text + ", Lat:" + curr_lat + ", Lon:" + curr_lon + ", Time:" + time;
-		try {
-			File newFolder = new File(Environment.getExternalStorageDirectory(), "RescueRobotics_Heat2");
-			if (!newFolder.exists()) {
-				newFolder.mkdirs();
-				Log.i("app.main","Folder opened");
+ 		//	bucket , Lat:1232.23341 , Lon:123.31241 , Time: 214764219
+		System.out.println(" HI INFOOOOO:" +info);
+		if (isEmtpy(BucketLocations)) {
+			BucketLocations[0] = info;
+			System.out.println(" HI FIRST ELEMEND OF BUCKETLOCATIONS:" +BucketLocations[0]);
+		}
+
+		else {
+			System.out.println("HI LOGGING...isSame---------------------------------------------------:" + isSame(info,BucketLocations));
+			if (!(isSame(info,BucketLocations))) {
+				addBucketLocation(info);
+
 			}
-			try {
-				File file = new File(newFolder, time + ".txt");
-				file.createNewFile();
-				FileOutputStream fos = new FileOutputStream(file);
+		}
+		//for(int i =0; i<5; i++) {
+			//if (BucketLocations[i] != "") {
 				try {
-					byte[] b = info.getBytes();
-					fos.write(b);
-					fos.close();
-					ToneGenerator toneG = new ToneGenerator(AudioManager.STREAM_ALARM, 100);
-					toneG.startTone(ToneGenerator.TONE_CDMA_PIP, 200);
-					Log.i("app.main","File written");
-				} catch (IOException e) {
+					File newFolder = new File(Environment.getExternalStorageDirectory(), "RescueRobotics_Heat2");
+					if (!newFolder.exists()) {
+						newFolder.mkdirs();
+						Log.i("app.main", "Folder opened");
+					}
+					try {
+						File file = new File(newFolder, time + ".txt");
+						file.createNewFile();
+						FileOutputStream fos = new FileOutputStream(file);
+						try {
+							info = (BucketLocations[0]+"\n"
+									+BucketLocations[1]+"\n"
+									+BucketLocations[2]+"\n"
+									+BucketLocations[3]+"\n"
+									+BucketLocations[4]+"\n");
+							byte[] b = info.getBytes();
+							fos.write(b);
+							fos.close();
+							//ToneGenerator toneG = new ToneGenerator(AudioManager.STREAM_ALARM, 100);
+							//toneG.startTone(ToneGenerator.TONE_CDMA_PIP, 200);
+							Log.i("app.main", "File written");
+						} catch (IOException e) {
+							Log.e("app.main", "Couldn't write to SD");
+						}
+					} catch (Exception ex) {
+						Log.e("app.main", "Couldn't write to SD");
+					}
+				} catch (Exception e) {
 					Log.e("app.main", "Couldn't write to SD");
 				}
-			} catch (Exception ex) {
-				Log.e("app.main", "Couldn't write to SD");
-			}
-		} catch (Exception e) {
-			Log.e("app.main", "Couldn't write to SD");
-		}
-		Log.i("rescue robotics", text);
-		ToneGenerator toneG = new ToneGenerator(AudioManager.STREAM_ALARM, 100);
-		toneG.startTone(ToneGenerator.TONE_CDMA_PIP, 200);
+				Log.i("rescue robotics", text);
+				//ToneGenerator toneG = new ToneGenerator(AudioManager.STREAM_ALARM, 100);
+				//toneG.startTone(ToneGenerator.TONE_CDMA_PIP, 200);
+
+			//}
+		//}
 		return text;
 
 	}
+	//location-based bucket recognition
+	public boolean isSame (String str, String[] coords_memory) {
+		System.out.println("HI inside isSame");
+		boolean isSame = false;
+		double[] coords1 = getCoords(str);
+		for(int j=0; j < 2; j++){
+			System.out.println("HI coords1:"+coords1[j]);
+		}
+		double[] coords2;
+
+		for (String s : coords_memory) {
+			System.out.println("HI STRING VALUE:"+s);
+			if(s==""){
+				isSame = false;
+
+				return isSame;
+			}
+			coords2 = getCoords(s);
+
+			for(int j=0; j < 2; j++){
+				System.out.println("HI coords2:"+coords2[j]);
+			}
+			if ((coords1[0] == coords2[0] ) && (coords1[1] == coords2[1] )) {
+				isSame = true;
+				System.out.println("HI YES THEY ARE THE SAME");
+				return isSame;
+			}
+		}
+
+		return isSame;
+	}
+
+	public double[] getCoords (String str) {
+
+		int find_comma = str.indexOf(',');
+		String str_copy = str;
+		str_copy = str.substring(find_comma+2, str.length());
+
+		int find_colon = str_copy.indexOf(':');
+
+		find_comma = str_copy.indexOf(',');
+		String first_num = str_copy.substring(find_colon+1, find_comma-1);
+		str_copy = str_copy.substring(find_comma + 1, str_copy.length());
+
+		find_colon = str_copy.indexOf(':');
+		find_comma = str_copy.indexOf(',');
+		String sec_num = str_copy.substring(find_colon+1, find_comma-1);
+
+
+		double[] coords={0,0};
+		double d = Double.parseDouble(first_num);
+		double d2 = Double.parseDouble(sec_num);
+		//System.out.println("HI d="+d);
+		//System.out.println("HI d2="+d2);
+		coords[0] = d;
+		coords[1] = d2;
+		System.out.println("HI inside getCoords()");
+		return coords;
+	}
+	public void addBucketLocation (String str) {
+		int i = 0;
+		//while (!BucketLocations[i].contentEquals("")) {
+
+		while(BucketLocations[i]!=""){
+			i++;
+		}
+		if(i>4){
+			autoMode = false;
+		}
+		BucketLocations[i] = str;
+
+	}
+
+
+	public boolean isEmtpy (String[] strs) {
+		boolean isEmpty = false;
+
+		if (strs[0] == "") {
+			isEmpty = true;
+		}
+
+		return isEmpty;
+	}
+
 
 	public Location getGridLocations(int numGrid) {
 		Location gridLoc = new Location("");
@@ -597,7 +724,8 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 		//mDetector.setHsvColor(new Scalar(10,250,255));
 		//mDetector.setHsvColor(new Scalar(17,150,170));
 		//mDetector.setHsvColor(new Scalar(18,250,255));
-		mDetector.setHsvColor(new Scalar(13,214,214));
+		mDetector.setHsvColor(new Scalar(4,230,210));
+		/* ---------mDetector.setHsvColor(new Scalar(13,214,214));----------*/
 	}
 	//Called when camera view stops
 	public void onCameraViewStopped() {
@@ -791,8 +919,14 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 		} else {
 			m_ioio_thread.set_speed(1500);
 			m_ioio_thread.set_steering(1500);
-		}
 
+			System.out.println("HI END MESSAGE: Locations are: ");
+			System.out.println("HI 1: " + BucketLocations[0]);
+			System.out.println("HI 2: " + BucketLocations[1]);
+			System.out.println("HI 3: " + BucketLocations[2]);
+			System.out.println("HI 4: " + BucketLocations[3]);
+			System.out.println("HI 5: " + BucketLocations[4]);
+		}
 		return mRgba;
 	}
 	
@@ -896,6 +1030,7 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 			  }
 		  });
 	}
+
 
 	/****************************************************** functions from IOIOActivity *********************************************************************************/
 
