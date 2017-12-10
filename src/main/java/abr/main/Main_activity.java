@@ -244,10 +244,10 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 		//topLeft.setLongitude(-117.826467); // green
 		//topLeft.setLatitude(33.6451911); //  // Aldrich Park
 		//topLeft.setLongitude(-117.8434636);  // Aldrich Park
-		topLeft.setLatitude(33.643661); //  // RH
-		topLeft.setLongitude(-117.840672);  // RH
-	//	topLeft.setLatitude(33.6439449); //  // RH
-		//topLeft.setLongitude(-117.8440741);  // RH
+		//topLeft.setLatitude(33.643661); //  // EG
+		//topLeft.setLongitude(-117.840672);  // EG
+		topLeft.setLatitude(33.6439449); //  // RH
+		topLeft.setLongitude(-117.8440741);  // RH
 		bottomRight = new Location(""); //define the bottomRight corner of field
 		//bottomRight.setLatitude(33.643051);
 		//bottomRight.setLongitude(-117.826044);
@@ -263,10 +263,10 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 		//bottomRight.setLongitude(-117.826853); // green
 		//bottomRight.setLatitude(33.64448609); // Aldrich park
 		//bottomRight.setLongitude(-117.8432909); // Aldrich Park
-		//bottomRight.setLatitude(33.6438690); // RH
-		//bottomRight.setLongitude(-117.8442126); // RH
-		bottomRight.setLatitude(33.6435412); // EG
-		bottomRight.setLongitude(-117.8401693); // EG
+		bottomRight.setLatitude(33.6438690); // RH
+		bottomRight.setLongitude(-117.8442126); // RH
+		//bottomRight.setLatitude(33.6435412); // EG
+		//bottomRight.setLongitude(-117.8401693); // EG
 	    centerLocation = new Location(""); //calculate the center point of the field
 	    centerLocation.setLatitude((bottomRight.getLatitude()+topLeft.getLatitude())/2);
 	    centerLocation.setLongitude((bottomRight.getLongitude()+topLeft.getLongitude())/2);
@@ -724,7 +724,7 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 		//mDetector.setHsvColor(new Scalar(10,250,255));
 		//mDetector.setHsvColor(new Scalar(17,150,170));
 		//mDetector.setHsvColor(new Scalar(18,250,255));
-		mDetector.setHsvColor(new Scalar(4,230,210));
+		mDetector.setHsvColor(new Scalar(5,240,175));
 		/* ---------mDetector.setHsvColor(new Scalar(13,214,214));----------*/
 	}
 	//Called when camera view stops
@@ -810,7 +810,7 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 						m_ioio_thread.set_steering(1500);
 						//Log coordinates if the area of the orange bucket is greater than .01 of the screen
 						if(m_ioio_thread != null && (m_ioio_thread.get_sonar2_reading() < 17
-								|| m_ioio_thread.get_sonar1_reading() < 17 || m_ioio_thread.get_sonar3_reading() < 17
+								|| m_ioio_thread.get_sonar1_reading() < 17 /*|| m_ioio_thread.get_sonar3_reading() < 17*/
 								|| (mDetector.getMaxArea()/(mDetector.getCenterX()*mDetector.getCenterY()*4) > .12))) {
 							Log.v("app.main", "obstacle reached");
 							log_coordinates();
@@ -848,14 +848,14 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 				}
 			}
 			else if(m_ioio_thread != null && (m_ioio_thread.get_sonar2_reading() < 17 || m_ioio_thread.get_sonar1_reading() < 17
-					|| m_ioio_thread.get_sonar3_reading() < 17 || (mDetector.getMaxArea()/(mDetector.getCenterX()*mDetector.getCenterY()*4) > .12))) { //might have to change this value
+					/*|| m_ioio_thread.get_sonar3_reading() < 17 */|| (mDetector.getMaxArea()/(mDetector.getCenterX()*mDetector.getCenterY()*4) > .12))) { //might have to change this value
 				//if(curr_loc.distanceTo(dest_loc) <= 25 && m_ioio_thread.get_sonar2_reading() < 30 && (mDetector.getMaxArea()/(mDetector.getCenterX()*mDetector.getCenterY()*4) > .01)) //bucket reached
 				System.out.println("HI CURR LOC: "+curr_loc.distanceTo(dest_loc));
 				if(curr_loc.distanceTo(dest_loc) <= 70) { //bucket reached
 					Log.v("app.main", "bucket reached");
 					//backCounter = 5;
 					log_coordinates();
-					if(m_ioio_thread.get_sonar1_reading() < m_ioio_thread.get_sonar3_reading()) { //bucket on left
+					if(m_ioio_thread.get_sonar1_reading() < m_ioio_thread.get_sonar2_reading()) { //bucket on left
 						Log.v("app.main", "bucket on left");
 						backObstacleLeftCounter = 18;
 					} else { //bucket on right
@@ -863,7 +863,7 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 						backObstacleRightCounter = 18;
 					}
 				}else{ //avoiding obstacle
-					if(m_ioio_thread.get_sonar1_reading() < m_ioio_thread.get_sonar3_reading()){ //obstacle on left
+					if(m_ioio_thread.get_sonar1_reading() < m_ioio_thread.get_sonar2_reading()){ //obstacle on left
 						Log.v("app.main", "obstacle on left");
 						backObstacleLeftCounter = 18;
 						//m_ioio_thread.set_speed(1500-obstacleTurningSpeed);
