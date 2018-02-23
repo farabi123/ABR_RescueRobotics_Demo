@@ -246,8 +246,12 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 		//topLeft.setLongitude(-117.8434636);  // Aldrich Park
 		//topLeft.setLatitude(33.643661); //  // EG
 		//topLeft.setLongitude(-117.840672);  // EG
-		topLeft.setLatitude(33.6439449); //  // RH
-		topLeft.setLongitude(-117.8440741);  // RH
+
+        topLeft.setLatitude(33.6435262); //  // EG
+        topLeft.setLongitude(-117.8407593);  // EG
+
+       // topLeft.setLatitude(33.6439449); //  // RH
+		//topLeft.setLongitude(-117.8440741);  // RH
 		bottomRight = new Location(""); //define the bottomRight corner of field
 		//bottomRight.setLatitude(33.643051);
 		//bottomRight.setLongitude(-117.826044);
@@ -263,8 +267,10 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 		//bottomRight.setLongitude(-117.826853); // green
 		//bottomRight.setLatitude(33.64448609); // Aldrich park
 		//bottomRight.setLongitude(-117.8432909); // Aldrich Park
-		bottomRight.setLatitude(33.6438690); // RH
-		bottomRight.setLongitude(-117.8442126); // RH
+		//bottomRight.setLatitude(33.6438690); // RH
+		//bottomRight.setLongitude(-117.8442126); // RH
+        bottomRight.setLatitude(33.6432898); // EG
+        bottomRight.setLongitude(-117.8402044); // EG
 		//bottomRight.setLatitude(33.6435412); // EG
 		//bottomRight.setLongitude(-117.8401693); // EG
 	    centerLocation = new Location(""); //calculate the center point of the field
@@ -724,7 +730,7 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 		//mDetector.setHsvColor(new Scalar(10,250,255));
 		//mDetector.setHsvColor(new Scalar(17,150,170));
 		//mDetector.setHsvColor(new Scalar(18,250,255));
-		mDetector.setHsvColor(new Scalar(5,240,175));
+		mDetector.setHsvColor(new Scalar(21,251,122));
 		/* ---------mDetector.setHsvColor(new Scalar(13,214,214));----------*/
 	}
 	//Called when camera view stops
