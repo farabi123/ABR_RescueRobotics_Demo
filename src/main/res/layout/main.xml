@@ -1,74 +1,63 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#000000"
-    android:orientation="horizontal" >
+    android:layout_height="match_parent">
 
-    <org.opencv.android.JavaCameraView
+    <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:id="@+id/color_blob_detection_activity_surface_view" />
-    
-    <TextView
-        android:id="@+id/distanceText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textColor = "#FFF"
-        android:paddingLeft="50dp"
-        android:text="@string/sonar2" />
-    
-    <TextView
-        android:id="@+id/bearingText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textColor = "#FFF"
-        android:paddingLeft="200dp"
-        android:text="@string/sonar2" />
-    
-    <TextView
-        android:id="@+id/headingText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textColor = "#FFF"
-        android:paddingLeft="350dp"
-        android:text="@string/sonar2" />
-    
-    <Button
-        android:id="@+id/btnAuto"
-        android:layout_width="@dimen/command_button_size"
-        android:layout_height="@dimen/command_button_size"
-        android:layout_margin="@dimen/command_button_margin"
-        android:background="@drawable/button_auto"
-        android:layout_alignParentBottom="true"
-		android:layout_alignParentRight="true"/>
+        android:layout_alignParentTop="true"
+        android:paddingLeft="20dp">
 
-    <TextView
-        android:id="@+id/sonar1"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_alignParentLeft="true"
-        android:paddingLeft="50dp"
-        android:text="@string/sonar2"
-        android:textColor="#FFF" />
-    
-    <TextView
-        android:id="@+id/sonar2"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_alignParentLeft="true"
-        android:paddingLeft="200dp"
-        android:text="@string/sonar2"
-        android:textColor="#FFF" />
-    
-    <TextView
-        android:id="@+id/sonar3"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_alignParentLeft="true"
-        android:paddingLeft="350dp"
-        android:text="@string/sonar2"
-        android:textColor="#FFF" />
+        <org.opencv.android.JavaCameraView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:id="@+id/color_blob_detection_activity_surface_view" />
+        <Button
+            android:id="@+id/up_button"
+            android:layout_width="140dp"
+            android:layout_height="140dp"
+            android:onClick="onButtonClick"
+            android:background="@drawable/up"
+            android:layout_alignParentTop="true"
+            android:layout_alignLeft="@+id/down_button" />
+
+        <Button
+            android:id="@+id/turn_left_button"
+            android:layout_width="140dp"
+            android:layout_height="140dp"
+            android:onClick="onButtonClick"
+            android:background="@drawable/left"
+            android:layout_alignTop="@+id/turn_right_button"
+            android:layout_marginLeft="84dp" />
+
+        <Button
+            android:id="@+id/start_stop_button"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:onClick="onButtonClick"
+            android:background="@drawable/start_stop"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentLeft="true" />
+        <Button
+            android:id="@+id/turn_right_button"
+            android:layout_width="140dp"
+            android:layout_height="140dp"
+            android:onClick="onButtonClick"
+            android:background="@drawable/right"
+            android:layout_centerVertical="true"
+            android:layout_toRightOf="@+id/up_button" />
+        <Button
+            android:id="@+id/down_button"
+            android:layout_width="140dp"
+            android:layout_height="140dp"
+            android:background="@drawable/down"
+            android:onClick="onButtonClick"
+            android:layout_alignParentBottom="true"
+            android:layout_toRightOf="@+id/turn_left_button" />
+
+    </RelativeLayout>
+
+
+
 </RelativeLayout>

@@ -71,21 +71,22 @@ import android.view.WindowManager;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.ToggleButton;
 
 public class Main_activity extends Activity implements IOIOLooperProvider, SensorEventListener, ConnectionCallbacks, OnConnectionFailedListener,
 		CvCameraViewListener2 // implements IOIOLooperProvider: from IOIOActivity
 {
 	private final IOIOAndroidApplicationHelper helper_ = new IOIOAndroidApplicationHelper(this, this); // from IOIOActivity
-	
+
 	boolean isSame;
 	boolean redRobot = true; //account for different gear ratios
 	int forwardSpeed;
 	int turningSpeed;
 	int obstacleTurningSpeed;
-	
+
 	// ioio variables
 	IOIO_thread m_ioio_thread;
-	
+
 	//blob detection variables
 	private CameraBridgeViewBase mOpenCvCameraView;
 	private Mat mRgba;
@@ -94,12 +95,9 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 	private Mat mSpectrum;
 	private Scalar CONTOUR_COLOR;
 
-	private String[] BucketLocations = {"","","","","","","","","",""};
-
-
 	//app state variables
 	private boolean autoMode;
-	
+
 	//variables for logging
 	private Sensor mGyroscope;
 	private Sensor mGravityS;
@@ -115,7 +113,7 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 	private LocationListener mLocationListener;
 	Location dest_loc;
 	float distance = 0;
-	
+
 	//variables for compass
 	private SensorManager mSensorManager;
 	private Sensor mCompass, mAccelerometer;
@@ -123,15 +121,10 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 	float[] mGeomagnetic;
 	public float heading = 0;
 	public float bearing;
+	int areaCount = 0;
+	int colorcounter = 0;
+	int colorflag = 0;
 
-	//ui variables
-	TextView sonar1Text;
-	TextView sonar2Text;
-	TextView sonar3Text;
-	TextView distanceText;
-	TextView bearingText;
-	TextView headingText;
-	
 	//sockets for message passing
 	Boolean isClient = true;
 	ServerSocket serverSocket;
@@ -139,28 +132,12 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 	Socket clientSocket;
 	DataInputStream dataInputStream;
 	DataOutputStream dataOutputStream;
-	
-	//occupancy grid variables
-	int numSweeps = 0;
-	int[][] occupancyGrid;
-	Location[][] gridLocations;
-	Location centerLocation;
-	Location topLeft;
-	Location bottomRight;
-	int gridSize = 4;//5;
-	int sendCounter = 0;
-	int destRow = 0;
-	int destCol = 0;
-	int gridNum = 1; // added to search for buckets in grid order
-	
+
+
 	//timers
-	int pauseCounter = 0;
-	int backCounter = 0;
-	int backObstacleLeftCounter = 0;
-	int backObstacleRightCounter = 0;
 	Long startTime;
 	Long currTime;
-	
+
 	//pan/tilt
 	int panVal=1500;
 	int tiltVal=1500;
@@ -170,7 +147,7 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 	int tiltInc;
 
 
-
+	boolean configured=false;
 
 	// called to use OpenCV libraries contained within the app as opposed to a separate download
 	static {
@@ -178,32 +155,26 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 			// Handle initialization error
 		}
 	}
-	
+
 	// called whenever the activity is created
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		
+
 		requestWindowFeature(Window.FEATURE_NO_TITLE);
 		getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 		setContentView(R.layout.main);
-		
+
 		helper_.create(); // from IOIOActivity
-		
+
 		//set up opencv camera
 		mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.color_blob_detection_activity_surface_view);
 		mOpenCvCameraView.setCvCameraViewListener(this);
 		mOpenCvCameraView.enableView();
 
 		//initialize textviews
-		sonar1Text = (TextView) findViewById(R.id.sonar1);
-		sonar2Text = (TextView) findViewById(R.id.sonar2);
-		sonar3Text = (TextView) findViewById(R.id.sonar3);
-		distanceText = (TextView) findViewById(R.id.distanceText);
-		bearingText = (TextView) findViewById(R.id.bearingText);
-		headingText = (TextView) findViewById(R.id.headingText);
-		
+
 		//add functionality to autoMode button
-		Button buttonAuto = (Button) findViewById(R.id.btnAuto);
+	/*	Button buttonAuto = (Button) findViewById(R.id.btnAuto);
 		buttonAuto.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
 				if (!autoMode) {
@@ -216,95 +187,17 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 				}
 			}
 		});
-		
+
 		//set starting autoMode button color
 		if (autoMode) {
 			buttonAuto.setBackgroundResource(R.drawable.button_auto_on);
 		} else {
 			buttonAuto.setBackgroundResource(R.drawable.button_auto_off);
 		}
-		
-		 //set up occupancy grid
-	    numSweeps = 0;
-	    occupancyGrid = new int[gridSize][gridSize];
-	    topLeft = new Location(""); //define the topLeft corner of field
-		//topLeft.setLatitude(33.643148);
-		//topLeft.setLongitude(-117.826472);
-		//topLeft.setLatitude(33.643250);
-		//topLeft.setLongitude(-117.826453);
-		//topLeft.setLatitude(33.647414); // SS
-		//topLeft.setLongitude(-117.839141); // SS
-		//topLeft.setLatitude(33.644298); // ICS
-		//topLeft.setLongitude(-117.842189); // ICS
-		//topLeft.setLatitude(33.642930); // PV
-		//topLeft.setLongitude(-117.833742); // PV
-		//topLeft.setLatitude(33.643253);
-		//topLeft.setLongitude(-117.826558);
-		//topLeft.setLatitude(33.642941); // green
-		//topLeft.setLongitude(-117.826467); // green
-		//topLeft.setLatitude(33.6451911); //  // Aldrich Park
-		//topLeft.setLongitude(-117.8434636);  // Aldrich Park
-		//topLeft.setLatitude(33.643661); //  // EG
-		//topLeft.setLongitude(-117.840672);  // EG
 
-        topLeft.setLatitude(33.6435262); //  // EG
-        topLeft.setLongitude(-117.8407593);  // EG
+*/
 
-       // topLeft.setLatitude(33.6439449); //  // RH
-		//topLeft.setLongitude(-117.8440741);  // RH
-		bottomRight = new Location(""); //define the bottomRight corner of field
-		//bottomRight.setLatitude(33.643051);
-		//bottomRight.setLongitude(-117.826044);
-		//bottomRight.setLatitude(33.643221);
-		//bottomRight.setLongitude(-117.826568);
-		//bottomRight.setLatitude(33.647575); // SS
-		//bottomRight.setLongitude(-117.839500); // SS
-		//bottomRight.setLatitude(33.644343); // ICS
-		//bottomRight.setLongitude(-117.841332); // ICS
-		//bottomRight.setLatitude(33.642941); // PV
-		//bottomRight.setLongitude(-117.826467); // PV
-		//bottomRight.setLatitude(33.642867); // green
-		//bottomRight.setLongitude(-117.826853); // green
-		//bottomRight.setLatitude(33.64448609); // Aldrich park
-		//bottomRight.setLongitude(-117.8432909); // Aldrich Park
-		//bottomRight.setLatitude(33.6438690); // RH
-		//bottomRight.setLongitude(-117.8442126); // RH
-        bottomRight.setLatitude(33.6432898); // EG
-        bottomRight.setLongitude(-117.8402044); // EG
-		//bottomRight.setLatitude(33.6435412); // EG
-		//bottomRight.setLongitude(-117.8401693); // EG
-	    centerLocation = new Location(""); //calculate the center point of the field
-	    centerLocation.setLatitude((bottomRight.getLatitude()+topLeft.getLatitude())/2);
-	    centerLocation.setLongitude((bottomRight.getLongitude()+topLeft.getLongitude())/2);
-	    Log.i("rescue robotics","center,lat:"+centerLocation.getLatitude()+"lon:"+centerLocation.getLongitude());
-	    gridLocations = calculateGridLocations(topLeft, bottomRight, gridSize);
-		gridNum = 1;
-	    
-	    //set destination
-	    //destRow = (int)Math.floor(Math.random()*gridSize);
-	    //destCol = (int)Math.floor(Math.random()*gridSize);
-	    //dest_loc = gridLocations[destRow][destCol];
-		dest_loc = getGridLocations(gridNum);
-		gridNum++;
-		
-		//set up location listener
-		mLocationListener = new LocationListener() {
-			public void onLocationChanged(Location location) {
-				curr_loc = location;
-				distance = location.distanceTo(dest_loc);
-				bearing = location.bearingTo(dest_loc);
-			}
-			@SuppressWarnings("unused")
-			public void onStatusChanged(String provider, int status, Bundle extras) {
-			}
-			@SuppressWarnings("unused")
-			public void onProviderEnabled(String provider) {
-			}
-			@SuppressWarnings("unused")
-			public void onProviderDisabled(String provider) {
-			}
-		};
-		
+
 		//set up compass
 		mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
 	    mCompass= mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
@@ -312,48 +205,7 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 	    mGyroscope = mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
 	    mGravityS = mSensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY);
 
-	    //set up sockets for communication with other robots
-	    /*
-	    if (isClient) {
-	    	try {
-	    		Object[] objects = (new FileClientAsyncTask()).execute().get(); 
-	    		socket = (Socket) objects[0];
-	    		dataOutputStream = (DataOutputStream) objects[1];
-	    		dataInputStream = (DataInputStream) objects[2];
-	    	} catch(Exception e) {
-	    		Log.e("rescue robotics", e.getMessage());
-	    	}  	
-	    }
-	    else {
-	    	try {
-	    		Object[] objects = (new FileServerAsyncTask()).execute().get();
-	    		serverSocket = (ServerSocket) objects[0];
-	    		clientSocket = (Socket) objects[1];
-	    		dataInputStream = (DataInputStream) objects[2];
-	    		dataOutputStream = (DataOutputStream) objects[3];
-	    	} catch(Exception e) {
-	    		Log.e("rescue robotics", e.getMessage());
-	    	}
-	    }
-	    */
-		// phone must be Android 2.3 or higher and have Google Play store
-		// must have Google Play Services: https://developers.google.com/android/guides/setup
-		buildGoogleApiClient();
-		mLocationRequest = new LocationRequest();
-	    mLocationRequest.setInterval(2000);
-	    mLocationRequest.setFastestInterval(500);
-	    mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-	    
-	    //set speeds. adjust accordingly for your robot
-	    if(redRobot){
-	    	forwardSpeed = 120;//180;
-	    	turningSpeed = 100;//90;//80;//70;//100;
-	    	obstacleTurningSpeed = 100;//90;//75;//55;//50;//70;//100;
-	    } else {
-	    	forwardSpeed = 80;//110 ;
-	    	turningSpeed = 50;//80;
-	    	obstacleTurningSpeed = 30;//45;//60;//90;
-	    }
+
 	}
 	//Method necessary for google play location services
 	protected synchronized void buildGoogleApiClient() {
@@ -389,67 +241,98 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
         //
         // More about this in the 'Handle Connection Failures' section.
     }
-    @Override
+	@Override
 	public final void onAccuracyChanged(Sensor sensor, int accuracy) {
 		// Do something here if sensor accuracy changes.
 	}
-    
-    //Called whenever the value of a sensor changes
+
+	// Called whenever the value of a sensor changes
+	// Should be called whenever a sensor changes.
+	// Good time to get IR values and send move commands to the robot
+
 	@Override
 	public final void onSensorChanged(SensorEvent event) {
-		 if(m_ioio_thread != null){
-			  setText("ir1: "+m_ioio_thread.get_sonar1_reading(), sonar1Text);
-			  setText("ir2: "+m_ioio_thread.get_sonar2_reading(), sonar2Text);
-			  setText("ir3: "+m_ioio_thread.get_sonar3_reading(), sonar3Text);
-			  setText("distance: "+distance, distanceText);
-			  setText("bearing: "+bearing, bearingText);
-			  setText("heading: "+heading, headingText);
-		  }
-		 
-		  if (event.sensor.getType() == Sensor.TYPE_GRAVITY)
-			  mGravity = event.values;
-		  if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE)
-			  mGyro = event.values;
-		  if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER)
-		      mAcc = event.values;
-		  if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD)
-		      mGeomagnetic = event.values;
-		  if (mAcc != null && mGeomagnetic != null) {
-			  float[] temp = new float[9];
-			  float[] R = new float[9];
-			  //Load rotation matrix into R
-			  SensorManager.getRotationMatrix(temp, null, mAcc, mGeomagnetic);
-			  //Remap to camera's point-of-view
-			  SensorManager.remapCoordinateSystem(temp, SensorManager.AXIS_X, SensorManager.AXIS_Z, R);
-			  //Return the orientation values
-			  float[] values = new float[3];
-			  SensorManager.getOrientation(R, values);
-			  //Convert to degrees
-			  for (int i=0; i < values.length; i++) {
-				  Double degrees = (values[i] * 180) / Math.PI;
-				  values[i] = degrees.floatValue();
-			  }
-			  //Update the compass direction
-			  heading = values[0]+12;
-			  heading = (heading*5 + fixWraparound(values[0]+12))/6; //add 12 to make up for declination in Irvine, average out from previous 2 for smoothness
-		   }
-	  }
+		if(m_ioio_thread != null) {
+			//	setText(String.format("%.3f", m_ioio_thread.getIrCenterReading()), irCenterText);
+		}
+
+	}
+	boolean moving = false;
+	public void onButtonClick(View v){
+		if(v.getId() == R.id.up_button) {
+			//m_ioio_thread.set_left(1800);
+			//m_ioio_thread.set_right(1800);
+			move(1800);
+			moving = true;
+
+			System.out.println ("MOVING FORWARD!");
+		}
+		else if(v.getId() == R.id.down_button) {
+			m_ioio_thread.set_left(1200);
+			m_ioio_thread.set_right(1200);
+			//move(1200);
+			System.out.println ("MOVING BACKWARD!");
+		}
+		else if(v.getId() == R.id.turn_left_button) {
+			turn_left(1600);
+			System.out.println ("MOVING LEFT!");
+		}
+		else if(v.getId() == R.id.turn_right_button) {
+			turn_right(1600);
+			System.out.println ("MOVING RIGHT!");
+		}
+		else if(v.getId() == R.id.start_stop_button){
+			//m_ioio_thread.set_left(1500);
+			//m_ioio_thread.set_right(1500);
+			stay();
+			configured=true;
+			System.out.println ("MOVING NOT!");
+		}
+		else{}
+	}
+
+	private void stay(){
+		m_ioio_thread.set_left(1500);
+		m_ioio_thread.set_right(1500);
+	}
+	private void move(int value){
+		m_ioio_thread.set_left(value);
+		m_ioio_thread.set_right(value);
+	}
+	private void turn_left(int value){
+		m_ioio_thread.set_left(value);
+		m_ioio_thread.set_right(value+200);
+	}
+	private void turn_right(int value){
+		m_ioio_thread.set_left(value+200);
+		m_ioio_thread.set_right(value);
+	}
+	private ToggleButton btnStartStop;
+	private void enableUi(final boolean enable) {
+		runOnUiThread(new Runnable() {
+			@Override
+			public void run() {
+				btnStartStop.setEnabled(enable);
+			}
+		});
+	}
+
 
 	//Scan for QR code and save information to phone
 	public String scan(Mat frame) {
 		Bitmap bMap = Bitmap.createBitmap(frame.width(), frame.height(), Bitmap.Config.ARGB_8888);
 		Utils.matToBitmap(frame, bMap);
-		int[] intArray = new int[bMap.getWidth()*bMap.getHeight()];  
-		//copy pixel data from the Bitmap into the 'intArray' array  
-		bMap.getPixels(intArray, 0, bMap.getWidth(), 0, 0, bMap.getWidth(), bMap.getHeight());  
+		int[] intArray = new int[bMap.getWidth()*bMap.getHeight()];
+		//copy pixel data from the Bitmap into the 'intArray' array
+		bMap.getPixels(intArray, 0, bMap.getWidth(), 0, 0, bMap.getWidth(), bMap.getHeight());
 
 		LuminanceSource source = new RGBLuminanceSource(bMap.getWidth(), bMap.getHeight(),intArray);
 
 		BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
-		Reader reader = new QRCodeReader();     
-	    
-		String text; 
-		
+		Reader reader = new QRCodeReader();
+
+		String text;
+
 	    try {
 			Result result = reader.decode(bitmap);
 			text = result.getText();
@@ -502,177 +385,8 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 		return text;
 	}
 
-	//Log coordinates to phone
-	public String log_coordinates() {
-		System.out.println("HI LOGGING COORDS...");
-		String text;
-		text = "Bucket";
-		Calendar calendar = Calendar.getInstance();
-		java.util.Date now = calendar.getTime();
-		java.sql.Timestamp currentTimestamp = new java.sql.Timestamp(now.getTime());
-		String time = currentTimestamp.toString();
-		curr_lat = curr_loc.getLatitude();
-		curr_lon = curr_loc.getLongitude();
-		String info = text + ", Lat:" + curr_lat + ", Lon:" + curr_lon + ", Time:" + time;
- 		//	bucket , Lat:1232.23341 , Lon:123.31241 , Time: 214764219
-		System.out.println(" HI INFOOOOO:" +info);
-		if (isEmtpy(BucketLocations)) {
-			BucketLocations[0] = info;
-			System.out.println(" HI FIRST ELEMEND OF BUCKETLOCATIONS:" +BucketLocations[0]);
-		}
-
-		else {
-			System.out.println("HI LOGGING...isSame---------------------------------------------------:" + isSame(info,BucketLocations));
-			if (!(isSame(info,BucketLocations))) {
-				addBucketLocation(info);
-
-			}
-		}
-		//for(int i =0; i<5; i++) {
-			//if (BucketLocations[i] != "") {
-				try {
-					File newFolder = new File(Environment.getExternalStorageDirectory(), "RescueRobotics_Heat2");
-					if (!newFolder.exists()) {
-						newFolder.mkdirs();
-						Log.i("app.main", "Folder opened");
-					}
-					try {
-						File file = new File(newFolder, time + ".txt");
-						file.createNewFile();
-						FileOutputStream fos = new FileOutputStream(file);
-						try {
-							info = (BucketLocations[0]+"\n"
-									+BucketLocations[1]+"\n"
-									+BucketLocations[2]+"\n"
-									+BucketLocations[3]+"\n"
-									+BucketLocations[4]+"\n");
-							byte[] b = info.getBytes();
-							fos.write(b);
-							fos.close();
-							//ToneGenerator toneG = new ToneGenerator(AudioManager.STREAM_ALARM, 100);
-							//toneG.startTone(ToneGenerator.TONE_CDMA_PIP, 200);
-							Log.i("app.main", "File written");
-						} catch (IOException e) {
-							Log.e("app.main", "Couldn't write to SD");
-						}
-					} catch (Exception ex) {
-						Log.e("app.main", "Couldn't write to SD");
-					}
-				} catch (Exception e) {
-					Log.e("app.main", "Couldn't write to SD");
-				}
-				Log.i("rescue robotics", text);
-				//ToneGenerator toneG = new ToneGenerator(AudioManager.STREAM_ALARM, 100);
-				//toneG.startTone(ToneGenerator.TONE_CDMA_PIP, 200);
-
-			//}
-		//}
-		return text;
-
-	}
-	//location-based bucket recognition
-	public boolean isSame (String str, String[] coords_memory) {
-		System.out.println("HI inside isSame");
-		boolean isSame = false;
-		double[] coords1 = getCoords(str);
-		for(int j=0; j < 2; j++){
-			System.out.println("HI coords1:"+coords1[j]);
-		}
-		double[] coords2;
-
-		for (String s : coords_memory) {
-			System.out.println("HI STRING VALUE:"+s);
-			if(s==""){
-				isSame = false;
-
-				return isSame;
-			}
-			coords2 = getCoords(s);
-
-			for(int j=0; j < 2; j++){
-				System.out.println("HI coords2:"+coords2[j]);
-			}
-			if ((coords1[0] == coords2[0] ) && (coords1[1] == coords2[1] )) {
-				isSame = true;
-				System.out.println("HI YES THEY ARE THE SAME");
-				return isSame;
-			}
-		}
-
-		return isSame;
-	}
-
-	public double[] getCoords (String str) {
-
-		int find_comma = str.indexOf(',');
-		String str_copy = str;
-		str_copy = str.substring(find_comma+2, str.length());
-
-		int find_colon = str_copy.indexOf(':');
-
-		find_comma = str_copy.indexOf(',');
-		String first_num = str_copy.substring(find_colon+1, find_comma-1);
-		str_copy = str_copy.substring(find_comma + 1, str_copy.length());
-
-		find_colon = str_copy.indexOf(':');
-		find_comma = str_copy.indexOf(',');
-		String sec_num = str_copy.substring(find_colon+1, find_comma-1);
 
 
-		double[] coords={0,0};
-		double d = Double.parseDouble(first_num);
-		double d2 = Double.parseDouble(sec_num);
-		//System.out.println("HI d="+d);
-		//System.out.println("HI d2="+d2);
-		coords[0] = d;
-		coords[1] = d2;
-		System.out.println("HI inside getCoords()");
-		return coords;
-	}
-	public void addBucketLocation (String str) {
-		int i = 0;
-		//while (!BucketLocations[i].contentEquals("")) {
-
-		while(BucketLocations[i]!=""){
-			i++;
-		}
-		if(i>4){
-			autoMode = false;
-		}
-		BucketLocations[i] = str;
-
-	}
-
-
-	public boolean isEmtpy (String[] strs) {
-		boolean isEmpty = false;
-
-		if (strs[0] == "") {
-			isEmpty = true;
-		}
-
-		return isEmpty;
-	}
-
-
-	public Location getGridLocations(int numGrid) {
-		Location gridLoc = new Location("");
-		if (numGrid <= gridSize && numGrid > 0) {
-			gridLoc = gridLocations[0][numGrid-1];
-		} else if (numGrid <= 2*gridSize && numGrid > gridSize) {
-			gridLoc = gridLocations[1][2*gridSize-numGrid];
-		} else if (numGrid <= 3*gridSize && numGrid > 2*gridSize) {
-			gridLoc = gridLocations[2][numGrid-2*gridSize-1];
-		} else if (numGrid <= 4*gridSize && numGrid > 3*gridSize) {
-			gridLoc = gridLocations[3][4*gridSize-numGrid];
-		//} else if (numGrid <= 5*gridSize && numGrid > 4*gridSize) {
-		//	gridLoc = gridLocations[4][numGrid-4*gridSize-1];
-		} else {
-			gridLoc = gridLocations[(int)Math.floor(Math.random()*gridSize)][(int)Math.floor(Math.random()*gridSize)];
-		}
-		return gridLoc;
-	}
-	
 	//Called whenever activity resumes from pause
 	@Override
 	public void onResume() {
@@ -683,11 +397,8 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 	    mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
 	    mSensorManager.registerListener(this, mGyroscope, SensorManager.SENSOR_DELAY_NORMAL);
 	    mSensorManager.registerListener(this, mGravityS, SensorManager.SENSOR_DELAY_NORMAL);
-	    if (mGoogleApiClient.isConnected()) {
-	        startLocationUpdates();
-	    }
 	}
-	
+
 	//Called when activity pauses
 	@Override
 	public void onPause() {
@@ -697,11 +408,11 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 		mSensorManager.unregisterListener(this);
 		stopLocationUpdates();
 	}
-	
+
 	protected void stopLocationUpdates() {
 	    LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, mLocationListener);
 	}
-	
+
 	//Called when activity restarts. onCreate() will then be called
 	@Override
 	public void onRestart() {
@@ -718,20 +429,8 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 		CONTOUR_COLOR = new Scalar(255, 0, 0, 255);
 
 		//To set color, find HSV values of desired color and convert each value to 1-255 scale
-		// H: 0-36 out of 360, S: 68-100 out of 100, V: 68-100 out of 100
-		// H: 0-26 out of 255, S: 173-255 out of 255, V: 173-255 out of 255
-		// middle: H: 13 out of 255, S: 214 out of 255, V: 214 out of 255
-		// range: H: 13 out of 255, S: 41 out of 255, V: 41 out of 255
-		//mDetector.setHsvColor(new Scalar(7, 196, 144)); // red
-		//mDetector.setHsvColor(new Scalar(253.796875,222.6875,195.21875)); // orange on a sunny day
-		//float[] hsv = new float[3];
-		//Color.RGBToHSV(240,11,0,hsv);
-		//Log.i("hahaha","hsv:"+hsv[0]+","+hsv[1]+","+hsv[2]);
-		//mDetector.setHsvColor(new Scalar(10,250,255));
-		//mDetector.setHsvColor(new Scalar(17,150,170));
-		//mDetector.setHsvColor(new Scalar(18,250,255));
 		mDetector.setHsvColor(new Scalar(21,251,122));
-		/* ---------mDetector.setHsvColor(new Scalar(13,214,214));----------*/
+
 	}
 	//Called when camera view stops
 	public void onCameraViewStopped() {
@@ -739,19 +438,11 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 	}
 	//Called at every camera frame. Main controls of the robot movements are in this function
 	public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
-		Log.i("hahaha","area:"+(mDetector.getMaxArea()/(mDetector.getCenterX()*mDetector.getCenterY()*4)) );
-		/*
-		if(sendCounter > 100){
-			sendGrid();
-			sendCounter = 0;
-		}
-		getGrid();
-		sendCounter++;
-		*/
-		
+		Log.i("hahaha","area:"+((mDetector.getMaxArea())/(mDetector.getCenterX()*mDetector.getCenterY())) );
+
 		mRgba = inputFrame.rgba();
 		mDetector.process(mRgba);
-		
+
 		List<MatOfPoint> contours = mDetector.getContours();
 		// Log.e("rescue robotics", "Contours count: " + contours.size());
 		Imgproc.drawContours(mRgba, contours, -1, CONTOUR_COLOR);
@@ -763,249 +454,40 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 				70 + mSpectrum.cols());
 		mSpectrum.copyTo(spectrumLabel);
 
-		// majority of control exists here
-		if (autoMode && (System.currentTimeMillis()-startTime < 900000)) { // only move if autoMode is on and time under time limit
-			if(System.currentTimeMillis()-startTime > 9000000)
-				autoMode = false;
-			//scan(mRgba);
-			if(backCounter > 0){
-				m_ioio_thread.set_steering(1500);
-				m_ioio_thread.set_speed(1500-forwardSpeed/2);//m_ioio_thread.set_speed(1500-forwardSpeed);
-				panVal = 1500;
-				tiltVal = 1500;
-				backCounter--;
-				if (backCounter == 0)
-					pauseCounter = 5;
-			}
-			else if(backObstacleLeftCounter > 0){
-				panVal = 1500;
-				tiltVal = 1500;
-				if (backObstacleLeftCounter > 10) {
-					m_ioio_thread.set_speed(1500-obstacleTurningSpeed);
-					m_ioio_thread.set_steering(1500);
-				} else {
-					m_ioio_thread.set_speed(1500-obstacleTurningSpeed);
-					m_ioio_thread.set_steering(1600);
-				}
-				backObstacleLeftCounter--;
-				if (backObstacleLeftCounter == 0)
-					pauseCounter = 5;
-			}
-			else if(backObstacleRightCounter > 0){
-				panVal = 1500;
-				tiltVal = 1500;
-				if (backObstacleRightCounter > 10) {
-					m_ioio_thread.set_speed(1500-obstacleTurningSpeed);
-					m_ioio_thread.set_steering(1500);
-				} else {
-					m_ioio_thread.set_speed(1500-obstacleTurningSpeed);
-					m_ioio_thread.set_steering(1400);
-				}
-				backObstacleRightCounter--;
-				if (backObstacleRightCounter == 0)
-					pauseCounter = 5;
-			}
-			else if(pauseCounter > 0){
-				m_ioio_thread.set_speed(1500);
-				m_ioio_thread.set_steering(1500);
-				pauseCounter--;
-				if (pauseCounter == 0) {
-					if(System.currentTimeMillis()-startTime > 870000){ // go to center at 9:30, might have to change this
-						dest_loc = centerLocation;
-						m_ioio_thread.set_speed(1500+forwardSpeed);
-						m_ioio_thread.set_steering(1500);
-						//Log coordinates if the area of the orange bucket is greater than .01 of the screen
-						if(m_ioio_thread != null && (m_ioio_thread.get_sonar2_reading() < 17
-								|| m_ioio_thread.get_sonar1_reading() < 17 /*|| m_ioio_thread.get_sonar3_reading() < 17*/
-								|| (mDetector.getMaxArea()/(mDetector.getCenterX()*mDetector.getCenterY()*4) > .12))) {
-							Log.v("app.main", "obstacle reached");
-							log_coordinates();
+		/*(m_ioio_thread != null &&*/
 
-						}
-					}
-					else {
-						//occupancyGrid[destRow][destCol]++;
-						/*
-						int minVal = Integer.MAX_VALUE;
-						int minRow = 0;
-						int minCol = 0;
-						for(int r = destRow - 1; r < destRow + 2; r++){
-							for(int c = destCol - 1; c < destCol + 1; c++){
-								if(r > -1 && r < gridSize && c > -1 && c < gridSize && r!=c)
-									if(occupancyGrid[r][c] < minVal){
-										minVal = occupancyGrid[r][c];
-										minRow = r;
-										minCol = c;
-									}
-							}
-						}
-						dest_loc = gridLocations[minRow][minCol];
-						*/
-						//destRow = (int)Math.floor(Math.random()*gridSize);
-					    //destCol = (int)Math.floor(Math.random()*gridSize);
-					    //dest_loc = gridLocations[destRow][destCol];
-						Log.v("app.main", "pause == 0");
-						m_ioio_thread.set_speed(1500+forwardSpeed);
-						m_ioio_thread.set_steering(1500);
-						dest_loc = getGridLocations(gridNum);
-						gridNum++;
+		System.out.println ("MOVING  VALUEEEEEE : "+(( (mDetector.getMaxArea())/(mDetector.getCenterX()*mDetector.getCenterY()*4))*100000));
 
-					}
-				}
-			}
-			else if(m_ioio_thread != null && (m_ioio_thread.get_sonar2_reading() < 17 || m_ioio_thread.get_sonar1_reading() < 17
-					/*|| m_ioio_thread.get_sonar3_reading() < 17 */|| (mDetector.getMaxArea()/(mDetector.getCenterX()*mDetector.getCenterY()*4) > .12))) { //might have to change this value
-				//if(curr_loc.distanceTo(dest_loc) <= 25 && m_ioio_thread.get_sonar2_reading() < 30 && (mDetector.getMaxArea()/(mDetector.getCenterX()*mDetector.getCenterY()*4) > .01)) //bucket reached
-				System.out.println("HI CURR LOC: "+curr_loc.distanceTo(dest_loc));
-				if(curr_loc.distanceTo(dest_loc) <= 70) { //bucket reached
-					Log.v("app.main", "bucket reached");
-					//backCounter = 5;
-					log_coordinates();
-					if(m_ioio_thread.get_sonar1_reading() < m_ioio_thread.get_sonar2_reading()) { //bucket on left
-						Log.v("app.main", "bucket on left");
-						backObstacleLeftCounter = 18;
-					} else { //bucket on right
-						Log.v("app.main", "bucket on right");
-						backObstacleRightCounter = 18;
-					}
-				}else{ //avoiding obstacle
-					if(m_ioio_thread.get_sonar1_reading() < m_ioio_thread.get_sonar2_reading()){ //obstacle on left
-						Log.v("app.main", "obstacle on left");
-						backObstacleLeftCounter = 18;
-						//m_ioio_thread.set_speed(1500-obstacleTurningSpeed);
-						//m_ioio_thread.set_steering(1400);
-					} else { //obstacle on right
-						Log.v("app.main", "obstacle on right");
-						backObstacleRightCounter = 18;
-						//m_ioio_thread.set_speed(1500-obstacleTurningSpeed);
-						//m_ioio_thread.set_steering(1600);
-					}
-						
-				}
-			}
-			else if(curr_loc.distanceTo(dest_loc) > 70) { // follow compass, might have to increase this to 10
-				float bearingMod = bearing%360;
-				float headingMod = heading%360;
-				
-				m_ioio_thread.set_speed(1500+forwardSpeed);
-				if (bearingMod >= headingMod) {
-					if (bearingMod - headingMod <= 180)
-						m_ioio_thread.set_steering(1500+turningSpeed);
-					else
-						m_ioio_thread.set_steering(1500-turningSpeed);
-					}
-				else {
-					if (headingMod - bearingMod <= 180)
-						m_ioio_thread.set_steering(1500-turningSpeed);
-					else
-						m_ioio_thread.set_steering(1500+turningSpeed);
-				}
-			} else { // follow orange bucket
-				double momentX = mDetector.getMomentX();
-				double momentY = mDetector.getMomentY();
-				int centerThreshold = (int) (.333 * mDetector.getCenterX());
-				if(mDetector.blobsDetected() == 0){
-					m_ioio_thread.set_speed(1600);
-					m_ioio_thread.set_steering(1500);
-				} else {
-					if(momentX > centerThreshold){
-						m_ioio_thread.set_speed(1600);
-						m_ioio_thread.set_steering(1600);
-					}
-					else if(momentX < -centerThreshold){
-						m_ioio_thread.set_speed(1600);
-						m_ioio_thread.set_steering(1400);
-					}
-					else {
-						m_ioio_thread.set_speed(1600);
-						m_ioio_thread.set_steering(1500);
-					}
-				}
-			}
-		} else {
-			m_ioio_thread.set_speed(1500);
-			m_ioio_thread.set_steering(1500);
 
-			System.out.println("HI END MESSAGE: Locations are: ");
-			System.out.println("HI 1: " + BucketLocations[0]);
-			System.out.println("HI 2: " + BucketLocations[1]);
-			System.out.println("HI 3: " + BucketLocations[2]);
-			System.out.println("HI 4: " + BucketLocations[3]);
-			System.out.println("HI 5: " + BucketLocations[4]);
+		//constantly detecting color
+		if(colorflag == 0) {
+		//	System.out.println("MOVING TRYING TO DETECT COLOR");
+			if (/*moving==true && */(((mDetector.getMaxArea()) / (mDetector.getCenterX() * mDetector.getCenterY() * 4)) * 100000 > 5)) {
+				//increment counter
+				areaCount++;
+
+				if ((areaCount == 4)) {
+					System.out.println("MOVING areaCount ---------------------------STOPPING------------------");
+					stay();
+					colorflag = 1;
+					colorcounter=175;
+					m_ioio_thread.move = 0;
+					//move(1800);
+					//areaCount=0
+				}
+
+			}
+
+		}
+		if((colorflag == 1)&&(colorcounter>0)){
+			colorcounter--;
+			if(colorcounter == 0){
+				m_ioio_thread.move = 1;
+			}
 		}
 		return mRgba;
 	}
-	
-	//send occupancy grid information using output stream from socket
-	public void sendGrid(){
-		if(dataOutputStream != null)
-			try {
-				dataOutputStream.writeInt(numSweeps);
-				for(int i = 0; i < gridSize; i++){
-					for(int j = 0; j < gridSize; j++){
-						dataOutputStream.writeInt(occupancyGrid[i][j]);
-					}
-				}
-				Log.i("rescue robotics", "grid sent");
-			} catch (IOException e) {
-				Log.e("rescue robotics", e.getMessage());
-			}
-	}
 
-	//receive and update occupancy grid data using input stream from socket
-	public void getGrid(){
-		try {
-			if(dataInputStream != null && dataInputStream.available() >= 4*17) {
-				int receivedNumSweeps = dataInputStream.readInt();
-				for(int i = 0; i < gridSize; i++){
-					for(int j = 0; j < gridSize; j++){
-						int receivedVal = dataInputStream.readInt();
-						if((receivedNumSweeps > numSweeps) || receivedVal > occupancyGrid[i][j])
-							occupancyGrid[i][j] = receivedVal;
-						Log.e("rescue robotics","i:"+i+",j:"+j+",val:"+receivedVal);
-					}
-				}
-				if(receivedNumSweeps > numSweeps)
-					numSweeps = receivedNumSweeps;
-			}
-		} catch (IOException e) {
-			Log.e("rescue robotics", e.getMessage());
-		}
-	}
-	
-	//construct the 2D matrix of Locations corresponding to the centers of grid squares
-	//works only in northern hemisphere and not if your field crosses the prime meridian
-	public static Location[][] calculateGridLocations(Location topLeft, Location bottomRight, int gridSize){
-		Location[][] result = new Location[gridSize][gridSize];
-		for(int i = 0; i < gridSize; i++){
-			for(int j = 0; j < gridSize; j++){
-				//calculate dot around origin
-				double c = Math.sqrt(Math.pow(topLeft.getLongitude()-bottomRight.getLongitude(),2) + Math.pow(topLeft.getLatitude()-bottomRight.getLatitude(),2));
-				double x = c/Math.sqrt(2);
-				double lon = -x/2 + x/gridSize/2 + i * x/gridSize;
-				double lat = x/2 - x/gridSize/2 - j * x/gridSize;
-				//calculate theta
-				double midpt_lon = (topLeft.getLongitude() + bottomRight.getLongitude()) / 2;
-				double midpt_lat = (topLeft.getLatitude() + bottomRight.getLatitude()) / 2;
-				double topLeftOrig_lon = topLeft.getLongitude() - midpt_lon;
-				double topLeftOrig_lat = topLeft.getLatitude() - midpt_lat;
-				double topLeftOrig_theta = Math.atan2(topLeftOrig_lat,topLeftOrig_lon);
-				double theta = topLeftOrig_theta - 3 * Math.PI / 4;
-				//rotate dot around origin
-				lon = lon * Math.cos(theta) - lat * Math.sin(theta);
-				lat = lon * Math.sin(theta) + lat * Math.cos(theta);
-				//translate dot to original offset location
-				lon = lon + midpt_lon;
-				lat = lat + midpt_lat;
-				Location resultLoc = new Location("");
-				resultLoc.setLongitude(lon);
-				resultLoc.setLatitude(lat);
-				result[j][i] = resultLoc;
-				Log.i("rescue robotics","lon:"+lon+",lat:"+lat);
-			}
-		}
-		return result;
-	}
 
 	//revert any degree measurement back to the -179 to 180 degree scale
 	public float fixWraparound(float deg){
@@ -1015,9 +497,9 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 			return deg-360;
 		else
 			return deg+360;
-		  
+
 	}
-	
+
 	//determine whether 2 directions are roughly pointing in the same direction, correcting for angle wraparound
 	public boolean sameDir(float dir1, float dir2){
 		float dir = bearing%360;
@@ -1025,9 +507,9 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 		//return (Math.abs((double) (headingMod - dir)) < 22.5 || Math.abs((double) (headingMod - dir)) > 337.5);
 		return (Math.abs((double) (headingMod - dir)) < 2.5 || Math.abs((double) (headingMod - dir)) > 357.5);
 	}
-	
+
 	//set the text of any text view in this application
-	public void setText(final String str, final TextView tv) 
+	public void setText(final String str, final TextView tv)
 	{
 		  runOnUiThread(new Runnable() {
 			  @Override
@@ -1036,6 +518,8 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 			  }
 		  });
 	}
+
+
 
 
 	/****************************************************** functions from IOIOActivity *********************************************************************************/
@@ -1051,7 +535,7 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 		if (m_ioio_thread == null
 				&& connectionType
 						.matches("ioio.lib.android.bluetooth.BluetoothIOIOConnection")) {
-			m_ioio_thread = new IOIO_thread(this);
+			m_ioio_thread = new IOIO_thread();
 			return m_ioio_thread;
 		} else
 			return null;
@@ -1073,7 +557,6 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 		super.onStart();
 		Log.i("activity cycle","main activity starting");
 		helper_.start();
-		mGoogleApiClient.connect();
 	}
 
 	@Override
@@ -1092,7 +575,7 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 		} catch (IOException e) {
 			Log.e("rescue robotics", e.getMessage());
 		}
-		
+
 	}
 
 	@Override
@@ -1102,5 +585,5 @@ public class Main_activity extends Activity implements IOIOLooperProvider, Senso
 			helper_.restart();
 		}
 	}
-	
+
 }
